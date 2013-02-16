@@ -2,7 +2,7 @@
  * Simple demonstraion of type classes
  *
  * > scalac ordering.scala
- * > scala OrderingDemo
+ * > scala com.mikegagnon.typeclass.OrderingDemo
  *
  * @author Mike Gagnon
  */
@@ -22,30 +22,18 @@ trait Ordering[T] {
    *     0
    */
   def compare(x: T, y: T): Int
+  final def max(x: T, y: T): T = if (compare(x, y) > 0) x else y
+  final def equal(x: T, y: T): Boolean = compare(x,y) == 0
 }
 
 object Ordering {
-
   implicit val intOrdering: Ordering[Int] = new IntOrdering
   implicit val strOrdering: Ordering[String] = new StrOrdering
   implicit def seqOrdering[T : Ordering]: Ordering[Seq[T]] = new SeqOrdering
 
-  def compare[T : Ordering](x: T, y: T): Int =
-    implicitly[Ordering[T]].compare(x,y)
-
-  def max[T : Ordering](x: T, y: T): T =
-    if (implicitly[Ordering[T]].compare(x,y) > 0)
-      x
-    else
-      y
-
-  def equal[T : Ordering](x: T, y: T): Boolean =
-    implicitly[Ordering[T]].compare(x,y) == 0
-
-  // returns true iff x < y
-  def lessThan[T : Ordering](x: T, y: T): Boolean =
-    implicitly[Ordering[T]].compare(x,y) < 0
-
+  def compare[T : Ordering](x: T, y: T): Int = implicitly[Ordering[T]].compare(x,y)
+  def max[T : Ordering](x: T, y: T): T = implicitly[Ordering[T]].max(x,y)
+  def equal[T : Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].equal(x,y)
 }
 
 class IntOrdering extends Ordering[Int] {
@@ -78,8 +66,27 @@ class SeqOrdering[T : Ordering] extends Ordering[Seq[T]] {
 }
 
 object OrderingDemo {
-  def main(args: Array[String]) {
+  def withoutTypeClasses() = {
+    val intOrdering = new IntOrdering
+    val strOrdering = new StrOrdering
+    val seqIntOrdering = new SeqOrdering[Int]()(intOrdering)
+    val seqStrOrdering = new SeqOrdering[String]()(strOrdering)
+    println(intOrdering.max(-5, 10))
+    println(seqIntOrdering.max(Seq(1,2,3), Seq(1,5,2)))
+    println(seqStrOrdering.max(Seq("a","b","z"), Seq("a","b","c","d")))
+  }
+
+  def withTypeClasses() = {
+    println(Ordering.max(-5, 10))
     println(Ordering.max(Seq(1,2,3), Seq(1,5,2)))
     println(Ordering.max(Seq("a","b","z"), Seq("a","b","c","d")))
+  }
+
+  def main(args: Array[String]) {
+    println("withoutTypeClasses")
+    withoutTypeClasses()
+
+    println("\nwithTypeClasses")
+    withTypeClasses()
   }
 }
