@@ -43,7 +43,11 @@ class IntOrdering extends Ordering[Int] {
 }
 ```
 
-and
+```scala
+class StrOrdering extends Ordering[String] {
+  override def compare(x: String, y: String) = if (x < y) -1 else if (x > y) 1 else 0
+}
+```
 
 ```scala
 /**
@@ -53,13 +57,13 @@ and
  * e.g. compare(Seq(1,2,3), Seq(1)) is equivalent to
  *      compare(Seq(1,2,3), Seq(1, scala.Int.MinValue, scala.Int.MinValue))
  */
-class SeqOrdering[T : Ordering] extends Ordering[Seq[T]] {
+class SeqOrdering[T] extends Ordering[Seq[T]](subOrdering: Ordering[T]) {
   @tailrec
   final override def compare(x: Seq[T], y: Seq[T]) = (x, y) match {
-    case (headX :: tailX, headY :: tailY) => if (Ordering.equal(headX, headY)) {
+    case (headX :: tailX, headY :: tailY) => if (subOrdering.equal(headX, headY)) {
         compare(tailX, tailY)
       } else {
-        Ordering.compare(headX, headY)
+        subOrdering.compare(headX, headY)
       }
     case (head :: tail, Nil) => 1
     case (Nil, head :: tail) => -1
@@ -74,8 +78,8 @@ Here's how you would use these classes without the type-class design pattern:
   def withoutTypeClasses() = {
     val intOrdering = new IntOrdering
     val strOrdering = new StrOrdering
-    val seqIntOrdering = new SeqOrdering[Int]()(intOrdering)
-    val seqStrOrdering = new SeqOrdering[String]()(strOrdering)
+    val seqIntOrdering = new SeqOrdering[Int](intOrdering)
+    val seqStrOrdering = new SeqOrdering[String](strOrdering)
     println(intOrdering.max(-5, 10))
     println(seqIntOrdering.max(Seq(1,2,3), Seq(1,5,2)))
     println(seqStrOrdering.max(Seq("a","b","z"), Seq("a","b","c","d")))
