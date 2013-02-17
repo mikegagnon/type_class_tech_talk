@@ -21,7 +21,7 @@ trait Ordering[T] {
    * implelementations should follow these semantics:
    *   if (x < y)
    *     negative number
-   *   else if (x > x)
+   *   else if (x > y)
    *     positive number
    *   else
    *     0
