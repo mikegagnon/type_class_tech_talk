@@ -1,7 +1,7 @@
 /**
  * Simple demonstraion of type classes
  *
- * > scalac ordering.scala
+ * > scalac OrderingDemo.scala
  * > scala com.mikegagnon.typeclass.OrderingDemo
  *
  * @author Mike Gagnon
