@@ -265,5 +265,12 @@ in scope. Workaround: put implicit values in package object.
     - the entire companion object is entirely boiler plate
     - tuples...
 
+TODO
+====
+Discuss
+- Expression problem
+- Using type classes to escape hierarchical type system.
 
-
+See also
+- Type classes in Scala standard library 
+- Algebird, bijection
