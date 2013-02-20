@@ -44,11 +44,15 @@ class IntOrdering extends Ordering[Int] {
   override def compare(x: Int, y: Int) = if (x < y) -1 else if (x > y) 1 else 0
 }
 ```
+<<<<<<< HEAD
+=======
+
 ```scala
 class StrOrdering extends Ordering[String] {
   override def compare(x: String, y: String) = if (x < y) -1 else if (x > y) 1 else 0
 }
 ```
+
 ```scala
 /**
  * These semantics are consistent with String comparison.
