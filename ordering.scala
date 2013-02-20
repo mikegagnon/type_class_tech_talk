@@ -13,7 +13,7 @@ import scala.annotation.{implicitNotFound, tailrec}
 
 trait Ordering[T] {
   /**
-   * implelementations should follow these semantics:
+   * implementations should follow these semantics:
    *   if (x < y)
    *     negative number
    *   else if (x > x)
@@ -23,7 +23,6 @@ trait Ordering[T] {
    */
   def compare(x: T, y: T): Int
   final def max(x: T, y: T): T = if (compare(x, y) > 0) x else y
-  final def equal(x: T, y: T): Boolean = compare(x,y) == 0
 }
 
 object Ordering {
@@ -39,9 +38,6 @@ object Ordering {
 
   @implicitNotFound(msg = "Cannot find type class for ${T}")
   def max[T : Ordering](x: T, y: T): T = implicitly[Ordering[T]].max(x,y)
-
-  @implicitNotFound(msg = "Cannot find type class for ${T}")
-  def equal[T : Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].equal(x,y)
 }
 
 class IntOrdering extends Ordering[Int] {
