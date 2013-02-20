@@ -2,16 +2,16 @@ Type Class Tech Talk
 ====================
 
 Type classes are an effective (and popular) design pattern in Scala that is useful for developing
-beautiful APIs. They also allow you accomplish feats of type-system wizardry that wouldn't otherwise
-be possible in Scala.
+beautiful APIs. They also allow you accomplish type-system feats that wouldn't otherwise be possible
+in Scala.
 
 Prerequisites
 -------------
 You should be familiar with implicit values.
 
-Example 1: What's a typeclass?
+Example 1: What's a type class?
 ==============================
-I think English is pointless here. I'll just give a simple code example, where I compare scala code
+I think English is pointless here. I'll just give a simple code example, where I compare Scala code
 that *doesn't* use type classes to code that *does* use type classes.
 
 Ordering *without* type classes
