@@ -1,6 +1,8 @@
 Type Class Tech Talk
 ====================
 
+*Work in progress.* All feedback welcome (just file an issue or send a pull request).
+
 Type classes represent an effective (and popular) design pattern in Scala that is useful for developing
 beautiful APIs. They also allow you accomplish type-system feats that wouldn't otherwise be possible
 in Scala.
