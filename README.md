@@ -23,7 +23,7 @@ trait Ordering[T] {
    * implementations should follow these semantics:
    *   if (x < y)
    *     negative number
-   *   else if (x > x)
+   *   else if (x > y)
    *     positive number
    *   else
    *     0
