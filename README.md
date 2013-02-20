@@ -102,7 +102,7 @@ I think that's an ugly API; it's pretty much just like Java.
 *With* type classes
 ----------------------------
 
-Once we modify `Ordering` to use the type-class pattern our new client code will look like this:
+To contrast, our client code will look like this once we modify `Ordering` to use the type-class pattern:
 
 ```scala
   def withTypeClasses() = {
@@ -211,11 +211,11 @@ Then at run time the JVM ultimately invokes the`listOrdering.max` with `intOrder
 Type constraints and compile-time errors
 ----------------------------------------
 An interesting aspect of type classes, which we will explore further in a later section TODO, is
-that type classes provide a new way to define type constrains on method parameters.
+that type classes provide a new way to define type constraints on method parameters.
 
 In the `Ordering` example, for instance, you can only call `Ordering.max(a, b)` if `a` and `b` have
-an associated type class. In our case, `Ordering.max` can only be called on `Int`s, `String`s, and
-`List[Int]`s, and `List[String]`s. Notice we have managed to define a type constraint independent of
+an associated type class. In our case, `Ordering.max` can only be called on `Int`'s, `String`'s,
+`List[T]`'s (where `T` is one of the above). Notice we have managed to define a type constraint independent of
 the type hierarchy.
 
 What happens when we try to call `Ordering.max` an an unsupported type?
