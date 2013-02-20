@@ -1,7 +1,7 @@
 Type Class Tech Talk
 ====================
 
-Type classes are an effective (and popular) design pattern in Scala that is useful for developing
+Type classes represent an effective (and popular) design pattern in Scala that is useful for developing
 beautiful APIs. They also allow you accomplish type-system feats that wouldn't otherwise be possible
 in Scala.
 
@@ -44,8 +44,6 @@ class IntOrdering extends Ordering[Int] {
   override def compare(x: Int, y: Int) = if (x < y) -1 else if (x > y) 1 else 0
 }
 ```
-<<<<<<< HEAD
-=======
 
 ```scala
 class StrOrdering extends Ordering[String] {
