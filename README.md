@@ -274,3 +274,10 @@ Discuss
 See also
 - Type classes in Scala standard library 
 - Algebird, bijection
+
+Acknowledgements
+================
+Thank you for the valuable feedback!
+- [Oscar Boykin](https://github.com/johnynek)
+- [Sam Ritchie](https://github.com/sritchie)
+- [Arkajit Dey](https://github.com/arkajit)
