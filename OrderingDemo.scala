@@ -1,5 +1,5 @@
 /**
- * Simple demonstraion of type classes
+ * Simple demonstration of type classes
  *
  * > scalac OrderingDemo.scala
  * > scala com.mikegagnon.typeclass.OrderingDemo
@@ -17,12 +17,12 @@ import scala.annotation.{implicitNotFound, tailrec}
 trait Ordering[T] {
   // returns true iff x <= y
   def compare(x: T, y: T): Boolean
-  def equal(x: T, y: T): Boolean = compare(x, y) && compare(y, x)
+  final def equal(x: T, y: T): Boolean = compare(x, y) && compare(y, x)
 }
 
 object Ordering {
-  def compare[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].compare(x,y)
-  def equal[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].equal(x,y)
+  def compare[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].compare(x, y)
+  def equal[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].equal(x, y)
 
   implicit val intOrdering: Ordering[Int] = new IntOrdering
   implicit val strOrdering: Ordering[String] = new StrOrdering
@@ -41,7 +41,7 @@ class StrOrdering extends Ordering[String] {
 }
 
 /**
- * When comparing lists of different lengths, the lessThan method essentially pads the smaller
+ * When comparing lists of different lengths, the compare method essentially pads the smaller
  * list (on its right side) with minimal values.
  * e.g. compare(List(1,2,3), List(1)) is equivalent to
  *      compare(List(1,2,3), List(1, scala.Int.MinValue, scala.Int.MinValue))
