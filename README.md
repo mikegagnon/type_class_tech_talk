@@ -113,7 +113,7 @@ class StrOrdering extends Ordering[String] {
 
 ```scala
 /**
- * When comparing lists of different lengths, the lessThan method essentially pads the smaller
+ * When comparing lists of different lengths, the compare method essentially pads the smaller
  * list (on its right side) with minimal values.
  * e.g. compare(List(1,2,3), List(1)) is equivalent to
  *      compare(List(1,2,3), List(1, scala.Int.MinValue, scala.Int.MinValue))
