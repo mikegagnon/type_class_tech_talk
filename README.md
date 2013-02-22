@@ -8,10 +8,10 @@ beautiful APIs. They also allow you to accomplish type-system feats that wouldn'
 in Scala.
 
 What is a type class?
-=====================
+---------------------
 
 In Scala, a *type class* is a trait that defines functionality associated with one or more types,
-but is unrelated to the type hierachy of those types.
+but is unrelated to the type hierarchy of those types.
 
 For example Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
 trait is a type class (which is analagous to Java's
@@ -56,7 +56,7 @@ trait Ordered[T] {
 to use `Ordered`'s functionality.
 
 Why are type classes nice?
-==========================
+--------------------------
 Type classes are nice because they allow you to define functionality associated with types,
 without needing to affect the type hierarchy of those types. This feature has numerous practical
 benefits.
@@ -99,20 +99,19 @@ Now you can order every type of `Employee` without modifying the type hierarchy 
 `Employee` classes.
 
 Divergence from traditional OOP design
-======================================
+--------------------------------------
 One of the central tenets of OOP design is the unification of data structures
 (fields) and data functionality (methods) into classes. 
 Type classes represent a divergence from traditional objected-oriented design,
 as they provide an elegant and extensible mechanism for divorcing those concerns.
 
 How to make type classes convenient
-===================================
+-----------------------------------
 Why haven't type classes caught on as much? I think it's because in languages such as Java,
 type classes are inconvenient. To illustrate the inconvenience, let's implement a few
 instances of the `Ordering` type class using Java-style programmming.
 
-Java-style type classes
------------------------
+### Java-style type classes
 ```scala
 class IntOrdering extends Ordering[Int] {
   override def compare(x: Int, y: Int) = if (x < y) -1 else if (x > y) 1 else 0
@@ -190,8 +189,7 @@ You can't just compare two objects; you must first manually construct `Ordering`
 If you have even deeper-nested structures, it gets even uglier. 
 
 
-Scala-style type classes
------------------------
+### Scala-style type classes
 
 To contrast, our client code will look like this once we modify the `Ordering` type-class
 to take advantage of Scala's language features:
@@ -286,8 +284,8 @@ And we're done. You can now use the Ordering API as we showed earlier:
   }
 ```
 
-Tracing through the automagic
------------------------------
+### Tracing through the automagic
+
 Now when you compile:
 ```scala
 Ordering.max(List(1,2,3,4), List(1,5,2))
@@ -337,7 +335,7 @@ values of complex types such as:
 The semantics for comparison are always intuitive. I think that's beautiful.
 
 Criticisms
-==========
+----------
 As the saying goes, design patterns compensate for language weaknesses. With regards to type
 classes, there are several drawbacks to type classes that I believe stem from the fact that type
 classes are codified as a design pattern on top of implicits, rather than as a first-class language
@@ -356,7 +354,7 @@ in scope. Workaround: put implicit values in package object.
     - tuples...
 
 TODO
-====
+----
 Discuss
 - Expression problem
 - Using type classes to escape hierarchical type system.
