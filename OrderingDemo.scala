@@ -82,6 +82,11 @@ class Tup3Ordering[A, B, C](implicit aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
 
 object OrderingDemo {
 
+  def min[T: Ordering](items: T*) : Option[T] =
+    items.reduceOption{ (a, b) =>
+      if (Ordering.compare(a, b)) a else b
+    }
+
   val complexA = List(("a", 5, List("x", "y")), ("b", 11, List("p", "q")))
   val complexB = List(("a", 5, List("x", "y")), ("b", 11, List("p")))
 
@@ -106,10 +111,17 @@ object OrderingDemo {
   }
 
   def beautifulExample() = {
-    println(Ordering.compare(-5, 10))
-    println(Ordering.compare(List(1,2,4), List(1,2,3)))
-    println(Ordering.compare(List("a","b","c"), List("a","b","c","d")))
-    println(Ordering.compare(complexA, complexB))
+
+    def compare[T: Ordering](a: T, b: T) = {
+      println(Ordering.compare(a, b))
+      println(min(a, b))
+      println()
+    }
+
+    compare(-5, 10)
+    compare(List(1,2,4), List(1,2,3))
+    compare(List("a","b","c"), List("a","b","c","d"))
+    compare(complexA, complexB)
   }
 
   def main(args: Array[String]) {
