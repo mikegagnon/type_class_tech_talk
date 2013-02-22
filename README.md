@@ -80,7 +80,7 @@ class OrderedEmployee(id: Long) extends Employee(id) with Ordered[OrderedEmploye
 }
 ```
 
-But this isn't ideal, because it goes against the intended semantics of the sub-class
+But this design isn't ideal, because it goes against the intended semantics of the sub-class
 relationship; `OrderedEmployee` isn't truly a *type* of `Employee`. Rather, it's
 an `Employee` with some extra functionality jerry-rigged on.
 
@@ -111,7 +111,7 @@ Why haven't type classes caught on as much? I think it's because in languages su
 type classes are inconvenient. To illustrate the inconvenience, let's implement a few
 instances of the `Ordering` type class using Java-style programmming.
 
-### Java-style type classes
+### Bad: Java-style type classes
 ```scala
 class IntOrdering extends Ordering[Int] {
   override def compare(x: Int, y: Int) = if (x < y) -1 else if (x > y) 1 else 0
@@ -150,31 +150,18 @@ class ListOrdering[T](subOrder: Ordering[T]) extends Ordering[List[T]] {
 }
 ```
 
-```scala
-class Tup2Ordering[A, B](subOrderA: Ordering[A], subOrderB: Ordering[B]) extends Ordering[(A, B)] {
-  override def compare(x: (A, B), y: (A, B)) = {
-    val comparison = subOrderA.compare(x._1, y._1)
-    if (comparison == 0) {
-      subOrderB.compare(x._2, y._2)
-    } else {
-      comparison
-    }
-  }
-}
-```
-
 Here's how you would use these classes in the style of Java programming. 
 
 ```scala
-  def withoutTypeClasses() = {
-    val intOrdering = new IntOrdering
-    val strOrdering = new StrOrdering
-    val listIntOrdering = new ListOrdering[Int](intOrdering)
-    val listStrOrdering = new ListOrdering[String](strOrdering)
-    println(intOrdering.compare(-5, 10))
-    println(listIntOrdering.compare(List(1,2,3), List(1,5,2)))
-    println(listStrOrdering.compare(List("a","b","z"), List("a","b","c","d")))
-  }
+def javaStyle() = {
+  val intOrdering = new IntOrdering
+  val strOrdering = new StrOrdering
+  val listIntOrdering = new ListOrdering[Int](intOrdering)
+  val listStrOrdering = new ListOrdering[String](strOrdering)
+  println(intOrdering.compare(-5, 10))
+  println(listIntOrdering.compare(List(1,2,3), List(1,5,2)))
+  println(listStrOrdering.compare(List("a","b","z"), List("a","b","c","d")))
+}
 ```
 
 Which would print:
@@ -188,8 +175,53 @@ The client code is ugly and inconvenient because there's lots of boiler plate.
 You can't just compare two objects; you must first manually construct `Ordering` objects.
 If you have even deeper-nested structures, it gets even uglier. 
 
+### An even worse Java-style example
 
-### Scala-style type classes
+```scala
+class Tup2Ordering[A, B](subOrderA: Ordering[A], subOrderB: Ordering[B]) extends Ordering[(A, B)] {
+  override def compare(x: (A, B), y: (A, B)) = {
+    val comparison = subOrderA.compare(x._1, y._1)
+    if (comparison == 0) {
+      subOrderB.compare(x._2, y._2)
+    } else {
+      comparison
+    }
+  }
+}
+```
+
+```scala
+class Tup3Ordering[A, B, C](aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
+    extends Ordering[(A, B, C)] {
+  override def compare(x: (A, B, C), y: (A, B, C)) = {
+    val comparison = aOrd.compare(x._1, y._1)
+    if (comparison == 0) {
+      bcOrd.compare((x._2, x._3), (y._2, y._3))
+    } else {
+      comparison
+    }
+  }
+}
+```
+
+```scala
+def withoutTypeClasses() = {
+  val intOrdering = new IntOrdering
+  val strOrdering = new StrOrdering
+  val listStrOrdering = new ListOrdering[String]()(strOrdering)
+
+  val pairOrdering = new Tup2Ordering[Int, List[String]]()(intOrdering, listStrOrdering)
+  val tripleOrdering = new Tup3Ordering[String, Int, List[String]]()(strOrdering, pairOrdering)
+  val complexOrdering = new ListOrdering[(String, Int, List[String])]()(tripleOrdering)
+  
+  val complexA = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y")))
+  val complexB = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y", "z")))
+  
+  println(complexOrdering.compare(complexA, complexB))
+}
+```
+
+### Good: Scala-style type classes
 
 To contrast, our client code will look like this once we modify the `Ordering` type-class
 to take advantage of Scala's language features:
@@ -199,6 +231,10 @@ to take advantage of Scala's language features:
     println(Ordering.max(-5, 10))
     println(Ordering.max(List(1,2,3), List(1,5,2)))
     println(Ordering.max(List("a","b","z"), List("a","b","c","d")))
+    
+    val complexA = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y")))
+    val complexB = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y", "z")))
+    println(Ordering.max(complexA, complexB))
   }
 ```
 
@@ -207,14 +243,16 @@ Notice you don't have to specify types! Nor manually construct `Ordering` object
 Instead, you just ask the `Ordering` object to give you the max between two values, and it
 automagically figures everything out.
 
-Here's how you modify the code to use type classes.
+How do you do you accomplish this feat? It's easy; just make all the type classes `implicit`
+and define an `Ordering` companion object.
 
-*First*, define a companion object for `Ordering`, that implements the same methods as the `Ordering`
-trait, except that each method operates on an implicit `Ordering` object.
+#### First, setup a companion object for `Ordering`
+Define the `Ordering` companion object so that it mirrors the functionality of the `Ordering`
+type class.
+
 ```scala
 object Ordering {
   def compare[T](x: T, y: T)(implicit ord: Ordering[T]): Int = ord.compare(x,y)
-  def max[T](x: T, y: T)(implicit ord: Ordering[T]): T = ord.max(x,y)
 }
 ```
 
@@ -228,17 +266,19 @@ This style of implicits is so common (because of type classes) that Scala provid
 syntax, called *Context Bounds*. We can use this syntax like so:
 ```scala
 object Ordering {
-  def compare[T : Ordering](x: T, y: T): Int = implicitly[Ordering[T]].compare(x,y)
-  def max[T : Ordering](x: T, y: T): T = implicitly[Ordering[T]].max(x,y)
+  def compare[T: Ordering](x: T, y: T): Int = implicitly[Ordering[T]].compare(x,y)
 }
 ```
-The type parameter `[T : Ordering]` means `T` can be any type as long as there is an implicit
+
+The type parameter `[T: Ordering]` means `T` can be any type as long as there is an implicit
 `Ordering[T]` object available.
 
 
-*Second*, modify the implementation for `ListOrdering` so that `subOrder` is an implicit value.
+#### Second, modify the type-class implementations to use implicits
+
+Modify the implementation for `ListOrdering` so that `subOrder` is an implicit value.
 ```scala
-class ListOrdering[T : Ordering] extends Ordering[List[T]] {
+class ListOrdering[T: Ordering] extends Ordering[List[T]] {
   @tailrec
   final override def compare(x: List[T], y: List[T]) = (x, y) match {
     case (headX :: tailX, headY :: tailY) => {
@@ -255,24 +295,58 @@ class ListOrdering[T : Ordering] extends Ordering[List[T]] {
   }
 }
 ```
+
 Notice how the context-bounds syntax comes in handy here. When the `compare` method invokes
 `Ordering.compare(headX, headY)` the implicit `Ordering[T]` object gets implicitly passed around.
 And because of the context-bounds syntax, we never had to give the implicit `Ordering[T]` value
 a name (which would be pointless since it's implicit).
 
-We are almost done. *Lastly*, add implicit `Ordering` objects into the `Ordering` companion object:
+In a similar way, modify `Tup2Ordering` and `Tup3Ordering`.
 ```scala
-object Ordering {
-  implicit val intOrdering: Ordering[Int] = new IntOrdering
-  implicit val strOrdering: Ordering[String] = new StrOrdering
-  implicit def listOrdering[T : Ordering]: Ordering[List[T]] = new ListOrdering
-
-  def compare[T : Ordering](x: T, y: T): Int = implicitly[Ordering[T]].compare(x,y)
-  def max[T : Ordering](x: T, y: T): T = implicitly[Ordering[T]].max(x,y)
+class Tup2Ordering[A : Ordering, B : Ordering] extends Ordering[(A, B)] {
+  override def compare(x: (A, B), y: (A, B)) = {
+    val comparison = Ordering.compare(x._1, y._1)
+    if (comparison == 0) {
+      Ordering.compare(x._2, y._2)
+    } else {
+      comparison
+    }
+  }
 }
 ```
+
+```scala
+class Tup3Ordering[A, B, C](implicit aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
+    extends Ordering[(A, B, C)] {
+  override def compare(x: (A, B, C), y: (A, B, C)) = {
+    val comparison = Ordering.compare(x._1, y._1)
+    if (comparison == 0) {
+      Ordering.compare((x._2, x._3), (y._2, y._3))
+    } else {
+      comparison
+    }
+  }
+}
+```
+
+
+#### Lastly, add implicit `Ordering` objects into the `Ordering` companion object
+```scala
+object Ordering {
+  def compare[T: Ordering](x: T, y: T): Int = implicitly[Ordering[T]].compare(x,y)
+
+  implicit val intOrdering: Ordering[Int] = new IntOrdering
+  implicit val strOrdering: Ordering[String] = new StrOrdering
+  implicit def listOrdering[T: Ordering]: Ordering[List[T]] = new ListOrdering
+  implicit def tup2Ordering[A: Ordering, B: Ordering]: Ordering[(A, B)] = new Tup2Ordering
+  implicit def tup3Ordering[A: Ordering, B: Ordering, C: Ordering]: Ordering[(A, B, C)] = new Tup3Ordering
+}
+```
+
 The `Ordering` implementations are now always implicitly in scope because they are defined inside
 the `Ordering` companion object.
+
+#### Beautiful Scala-style client code
 
 And we're done. You can now use the Ordering API as we showed earlier:
 
@@ -288,15 +362,15 @@ And we're done. You can now use the Ordering API as we showed earlier:
 
 Now when you compile:
 ```scala
-Ordering.max(List(1,2,3,4), List(1,5,2))
+Ordering.compare(List(1,2,3,4), List(1,5,2))
 ```
-1. The `scalac` compiler will determine that you are trying to invoke `Ordering[List[Int]].max`
+1. The `scalac` compiler will determine that you are trying to invoke `Ordering[List[Int]].compare`
 2. This method can only be called if there exists, in scope, an implict `Ordering[List[Int]]` object
 3. The compiler looks for such an object, and finds the `listOrdering` method
 4. But the `listOrdering` method can only be invoked if there exists an implicit `Ordering[Int]` object
 5. The compiler looks for such an object, and finds the `intOrdering` value
 
-Then at run time the JVM ultimately invokes the`listOrdering.max` with `intOrdering` as the subOrder.
+Then at run time the JVM ultimately invokes the`listOrdering.compare` with `intOrdering` as the subOrder.
 
 Type constraints and compile-time errors
 ----------------------------------------
@@ -369,3 +443,4 @@ Thank you for the valuable feedback!
 - [Oscar Boykin](https://github.com/johnynek)
 - [Sam Ritchie](https://github.com/sritchie)
 - [Arkajit Dey](https://github.com/arkajit)
+- [Argyris Zymnis](https://github.com/azymnis)
