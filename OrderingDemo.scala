@@ -15,7 +15,7 @@ package com.mikegagnon.typeclass
 import scala.annotation.{implicitNotFound, tailrec}
 
 trait Ordering[T] {
-  // returns true iff x <= y
+  // returns x <= y
   def compare(x: T, y: T): Boolean
   def equal(x: T, y: T): Boolean = compare(x, y) && compare(y, x)
 }
