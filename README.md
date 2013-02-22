@@ -11,14 +11,16 @@ Prerequisites
 -------------
 You should be familiar with implicit values.
 
-Example 1: What's a type class?
-==============================
-I think English is pointless here. I'll just give a simple code example, where I compare Scala code
-that *doesn't* use type classes to code that *does* use type classes.
+What is a type class?
+=====================
 
-*Without* type classes
--------------------------------
+In Scala, a *type class* is a trait that defines functionality associated with one or more types,
+but is unrelated to the type hierachy of those types.
 
+For example Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
+trait is a type class (which is analagous to Java's
+[`Comparator`](http://docs.oracle.com/javase/6/docs/api/java/util/Comparator.html) type class).
+Here is a simplified defintion of `Ordering`:
 ```scala
 trait Ordering[T] {
   /**
@@ -31,15 +33,90 @@ trait Ordering[T] {
    *     0
    */
   def compare(x: T, y: T): Int
-  final def max(x: T, y: T): T = if (compare(x, y) > 0) x else y
 }
 ```
 
-This `Ordering` trait is essentially equivalent to Java's
-[`Comparator`](http://docs.oracle.com/javase/6/docs/api/java/util/Comparator.html) interface.
+In contrast, Scala's [`Ordered`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordered)
+trait *is not* a type class (which is analagous to Java's
+[`Comparable`](http://docs.oracle.com/javase/6/docs/api/java/lang/Comparable.html) interface). Here is
+a simplified definition of `Ordered`:
 
-Now let's implement a few `Ordering` classes:
+```scala
+trait Ordered[T] {
+  /**
+   * implementations should follow these semantics:
+   *   if (this < that)
+   *     negative number
+   *   else if (this > that)
+   *     positive number
+   *   else
+   *     0
+   */
+  def compare(that: T): Int
+}
+```
 
+`Ordered` is not a type class because a type `T` must subclass `Ordered`, in order for the type `T`
+to use `Ordered`'s functionality.
+
+Why are type classes nice?
+==========================
+Type classes are nice because they allow you to define functionality associated with types,
+without needing to affect the type hierarchy of those types. This feature has numerous practical
+benefits.
+
+Perhaps most importantly you add functionality to a type without needing to modify the class
+definition for that type.
+
+Let's use `Ordering` versus `Ordered` as a concrete example. Say you are using a third party
+class `Employee` to represent employees:
+
+```scala
+class Employee(val id: Long)
+```
+
+By default, you can't sort a list of `Employee` objects because the designer of the `Employee`
+class didn't subclass `Ordered[Employee]`. One way you could solve this problem is by
+defining:
+```scala
+class OrderedEmployee(id: Long) extends Employee(id) with Ordered[OrderedEmployee] {
+  def compare(that: OrderedEmployee) = ...
+}
+```
+
+But this isn't ideal, because it goes against the intended semantics of the sub-class
+relationship; `OrderedEmployee` isn't truly a *type* of `Employee`. Rather, it's
+an `Employee` with some extra functionality jerry-rigged on.
+
+If the third-party library already has a subclasses of `Employee`, say `Manager`
+and `TemporaryEmployee` then you can't just inject `OrderedEmployee` in between
+`Employee` and its subclasses.
+
+The better solution is to implement `Ordering` for `Employee` objects:
+```scala
+class EmployeeOrdering[T <: Employee] extends Ordering[T] {
+    def compare(x: T, y: T) = ...
+}
+```
+
+Now you can order every type of `Employee` without modifying the type hierarchy for
+`Employee` classes.
+
+Divergence from traditional OOP design
+======================================
+One of the central tenets of OOP design is the unification of data structures
+(fields) and data functionality (methods) into classes. 
+Type classes represent a divergence from traditional objected-oriented design,
+as they provide an elegant and extensible mechanism for divorcing those concerns.
+
+How to make type classes convenient
+===================================
+Why haven't type classes caught on as much? I think it's because in languages such as Java,
+type classes are inconvenient. To illustrate the inconvenience, let's implement a few
+instances of the `Ordering` type class using Java-style programmming.
+
+Java-style type classes
+-----------------------
 ```scala
 class IntOrdering extends Ordering[Int] {
   override def compare(x: Int, y: Int) = if (x < y) -1 else if (x > y) 1 else 0
@@ -78,7 +155,20 @@ class ListOrdering[T](subOrder: Ordering[T]) extends Ordering[List[T]] {
 }
 ```
 
-Here's how you would use these classes without the type-class design pattern:
+```scala
+class Tup2Ordering[A, B](subOrderA: Ordering[A], subOrderB: Ordering[B]) extends Ordering[(A, B)] {
+  override def compare(x: (A, B), y: (A, B)) = {
+    val comparison = subOrderA.compare(x._1, y._1)
+    if (comparison == 0) {
+      subOrderB.compare(x._2, y._2)
+    } else {
+      comparison
+    }
+  }
+}
+```
+
+Here's how you would use these classes in the style of Java programming. 
 
 ```scala
   def withoutTypeClasses() = {
@@ -86,25 +176,29 @@ Here's how you would use these classes without the type-class design pattern:
     val strOrdering = new StrOrdering
     val listIntOrdering = new ListOrdering[Int](intOrdering)
     val listStrOrdering = new ListOrdering[String](strOrdering)
-    println(intOrdering.max(-5, 10))
-    println(listIntOrdering.max(List(1,2,3), List(1,5,2)))
-    println(listStrOrdering.max(List("a","b","z"), List("a","b","c","d")))
+    println(intOrdering.compare(-5, 10))
+    println(listIntOrdering.compare(List(1,2,3), List(1,5,2)))
+    println(listStrOrdering.compare(List("a","b","z"), List("a","b","c","d")))
   }
 ```
 
 Which would print:
 ```
-10
-List(1, 5, 2)
-List(a, b, z)
+-1
+-1
+1
 ```
 
-I think that's an ugly API; it's pretty much just like Java. 
+The client code is ugly and inconvenient because there's lots of boiler plate.
+You can't just compare two objects; you must first manually construct `Ordering` objects.
+If you have even deeper-nested structures, it gets even uglier. 
 
-*With* type classes
-----------------------------
 
-To contrast, our client code will look like this once we modify `Ordering` to use the type-class pattern:
+Scala-style type classes
+-----------------------
+
+To contrast, our client code will look like this once we modify the `Ordering` type-class
+to take advantage of Scala's language features:
 
 ```scala
   def withTypeClasses() = {
