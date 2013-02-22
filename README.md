@@ -7,10 +7,6 @@ Type classes represent an effective (and popular) design pattern in Scala that i
 beautiful APIs. They also allow you to accomplish type-system feats that wouldn't otherwise be possible
 in Scala.
 
-Prerequisites
--------------
-You should be familiar with implicit values.
-
 What is a type class?
 =====================
 
