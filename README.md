@@ -13,10 +13,12 @@ What is a type class?
 In Scala, a *type class* is a trait that defines functionality associated with one or more types --- but
 is unrelated to the type hierarchy of those types.
 
-For example Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
-trait is a type class (which is analagous to Java's
-[`Comparator`](http://docs.oracle.com/javase/6/docs/api/java/util/Comparator.html) type class).
-Here is a simplified defintion of `Ordering`, taken from
+For example, Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
+trait *is* a type class, while the
+[`Ordered`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordered) trait *is not* a
+type class.
+
+Here is a simplified defintion of the `Ordering` type class, taken from
 ["Type Classes as Objects and Implicits"](http://ropas.snu.ac.kr/~bruno/papers/TypeClasses.pdf):
 ```scala
 trait Ordering[T] {
@@ -26,11 +28,7 @@ trait Ordering[T] {
 }
 ```
 
-In contrast, Scala's [`Ordered`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordered)
-trait *is not* a type class (which is analagous to Java's
-[`Comparable`](http://docs.oracle.com/javase/6/docs/api/java/lang/Comparable.html) interface). Here is
-a simplified definition of `Ordered`:
-
+Contrast that trait with this simplified definition of `Ordered`, which *is not* a type class:
 ```scala
 trait Ordered[T] {
   // returns this <= that
@@ -39,8 +37,8 @@ trait Ordered[T] {
 }
 ```
 
-`Ordered` is not a type class because a type `T` must subclass `Ordered`, in order for the type `T`
-to use `Ordered`'s functionality.
+`Ordered` is not a type class because a type `T` must subclass `Ordered` to acquire
+its functionality.
 
 Why are type classes nice?
 --------------------------
