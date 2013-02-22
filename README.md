@@ -16,19 +16,13 @@ is unrelated to the type hierarchy of those types.
 For example Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
 trait is a type class (which is analagous to Java's
 [`Comparator`](http://docs.oracle.com/javase/6/docs/api/java/util/Comparator.html) type class).
-Here is a simplified defintion of `Ordering`:
+Here is a simplified defintion of `Ordering`, taken from
+["Type Classes as Objects and Implicits"](http://ropas.snu.ac.kr/~bruno/papers/TypeClasses.pdf):
 ```scala
 trait Ordering[T] {
-  /**
-   * implementations should follow these semantics:
-   *   if (x < y)
-   *     negative number
-   *   else if (x > y)
-   *     positive number
-   *   else
-   *     0
-   */
-  def compare(x: T, y: T): Int
+  // returns x <= y
+  def compare(x: T, y: T): Boolean
+  final def equal(x: T, y: T): Boolean = compare(x, y) && compare(y, x)
 }
 ```
 
@@ -39,16 +33,9 @@ a simplified definition of `Ordered`:
 
 ```scala
 trait Ordered[T] {
-  /**
-   * implementations should follow these semantics:
-   *   if (this < that)
-   *     negative number
-   *   else if (this > that)
-   *     positive number
-   *   else
-   *     0
-   */
-  def compare(that: T): Int
+  // returns this <= that
+  def compare(that: T): Boolean
+  final def equal(that: T): Boolean = compare(y) && y.compare(x)
 }
 ```
 
@@ -76,7 +63,7 @@ class didn't subclass `Ordered[Employee]`. One way you could solve this problem 
 defining:
 ```scala
 class OrderedEmployee(id: Long) extends Employee(id) with Ordered[OrderedEmployee] {
-  def compare(that: OrderedEmployee) = ...
+  def compare(that: OrderedEmployee) = id <= that.id
 }
 ```
 
@@ -91,7 +78,7 @@ and `Temp`, then you can't just inject `OrderedEmployee` in between
 The better solution is to implement `Ordering` for `Employee` objects:
 ```scala
 class EmployeeOrdering[T <: Employee] extends Ordering[T] {
-    def compare(x: T, y: T) = ...
+    def compare(x: T, y: T) = x.id <= y.id
 }
 ```
 
@@ -116,38 +103,35 @@ instances of the `Ordering` type class using Java-style programmming.
 ### Bad: Java-style type classes
 ```scala
 class IntOrdering extends Ordering[Int] {
-  override def compare(x: Int, y: Int) = if (x < y) -1 else if (x > y) 1 else 0
+  override def compare(x: Int, y: Int) = x <= y
 }
 ```
 
 ```scala
 class StrOrdering extends Ordering[String] {
-  override def compare(x: String, y: String) = if (x < y) -1 else if (x > y) 1 else 0
+  override def compare(x: String, y: String) = x <= y
 }
 ```
 
 ```scala
 /**
- * These semantics are consistent with String comparison.
- * When comparing lists of different lengths, the compare method essentially pads the smaller
+ * When comparing lists of different lengths, the lessThan method essentially pads the smaller
  * list (on its right side) with minimal values.
  * e.g. compare(List(1,2,3), List(1)) is equivalent to
  *      compare(List(1,2,3), List(1, scala.Int.MinValue, scala.Int.MinValue))
+ * These semantics are consistent with String compare
  */
 class ListOrdering[T](subOrder: Ordering[T]) extends Ordering[List[T]] {
   @tailrec
   final override def compare(x: List[T], y: List[T]) = (x, y) match {
-    case (headX :: tailX, headY :: tailY) => {
-      val comparison = subOrder.compare(headX, headY)
-      if (comparison == 0) {
+    case (headX :: tailX, headY :: tailY) =>
+      if (subOrder.equal(headX, headY)) {
         compare(tailX, tailY)
       } else {
-        comparison
+        subOrder.compare(headX, headY)
       }
-    }
-    case (head :: tail, Nil) => 1
-    case (Nil, head :: tail) => -1
-    case (Nil, Nil) => 0
+    case (Nil, _) => true
+    case (_, Nil) => false
   }
 }
 ```
@@ -155,22 +139,22 @@ class ListOrdering[T](subOrder: Ordering[T]) extends Ordering[List[T]] {
 Here's how you would use these classes in the style of Java programming. 
 
 ```scala
-def anUglyExample() = {
+def uglyExample() = {
   val intOrdering = new IntOrdering
   val strOrdering = new StrOrdering
-  val listIntOrdering = new ListOrdering[Int](intOrdering)
-  val listStrOrdering = new ListOrdering[String](strOrdering)
+  val listIntOrdering = new ListOrdering[Int]()(intOrdering)
+  val listStrOrdering = new ListOrdering[String]()(strOrdering)
   println(intOrdering.compare(-5, 10))
-  println(listIntOrdering.compare(List(1,2,3), List(1,5,2)))
-  println(listStrOrdering.compare(List("a","b","z"), List("a","b","c","d")))
+  println(listIntOrdering.compare(List(1,2,4), List(1,2,3)))
+  println(listStrOrdering.compare(List("a","b","c"), List("a","b","c","d")))
 }
 ```
 
 Which would print:
 ```
--1
--1
-1
+true
+false
+true
 ```
 
 The client code is ugly and inconvenient because of all the tedious boiler plate.
@@ -183,53 +167,47 @@ Let's first define `Ordering` classes for 2-tuples and 3-tuples (this is not the
 
 ```scala
 class Tup2Ordering[A, B](subOrderA: Ordering[A], subOrderB: Ordering[B]) extends Ordering[(A, B)] {
-  override def compare(x: (A, B), y: (A, B)) = {
-    val comparison = subOrderA.compare(x._1, y._1)
-    if (comparison == 0) {
+  override def compare(x: (A, B), y: (A, B)) =
+    if (subOrderA.equal(x._1, y._1)) {
       subOrderB.compare(x._2, y._2)
     } else {
-      comparison
+      subOrderA.compare(x._1, y._1)
     }
-  }
 }
 ```
 
 ```scala
-class Tup3Ordering[A, B, C](aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
+class Tup3Ordering[A, B, C](subOrderA: Ordering[A], subOrderBC: Ordering[(B, C)])
     extends Ordering[(A, B, C)] {
-  override def compare(x: (A, B, C), y: (A, B, C)) = {
-    val comparison = aOrd.compare(x._1, y._1)
-    if (comparison == 0) {
-      bcOrd.compare((x._2, x._3), (y._2, y._3))
+  override def compare(x: (A, B, C), y: (A, B, C)) =
+    if (subOrderA.equal(x._1, y._1)) {
+      subOrderBC.compare((x._2, x._3), (y._2, y._3))
     } else {
-      comparison
+      subOrderA.compare(x._1, y._1)
     }
-  }
 }
 ```
 
 Now let's use these orderings to compare a complex data structure (this is the ugly part).
 
 ```scala
-def anEvenUglierExample() = {
+def evenUglierExample() = {
   val intOrdering = new IntOrdering
   val strOrdering = new StrOrdering
   val listStrOrdering = new ListOrdering[String]()(strOrdering)
-
   val pairOrdering = new Tup2Ordering[Int, List[String]]()(intOrdering, listStrOrdering)
   val tripleOrdering = new Tup3Ordering[String, Int, List[String]]()(strOrdering, pairOrdering)
   val complexOrdering = new ListOrdering[(String, Int, List[String])]()(tripleOrdering)
   
-  val complexA = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y")))
-  val complexB = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y", "z")))
-  
+  val complexA = List(("a", 5, List("x", "y")), ("b", 11, List("p", "q")))
+  val complexB = List(("a", 5, List("x", "y")), ("b", 11, List("p")))
   println(complexOrdering.compare(complexA, complexB))
 }
 ```
 
 Which would print:
 ```
--1
+false
 ```
 
 ### Good: Scala-style type classes
@@ -238,15 +216,15 @@ In contrast, our client code will look beautiful once we modify the `Ordering` t
 to take advantage of Scala's language features:
 
 ```scala
-  def aBeautifulExample() = {
-    println(Ordering.compare(-5, 10))
-    println(Ordering.compare(List(1,2,3), List(1,5,2)))
-    println(Ordering.compare(List("a","b","z"), List("a","b","c","d")))
-    
-    val complexA = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y")))
-    val complexB = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y", "z")))
-    println(Ordering.compare(complexA, complexB))
-  }
+def beautifulExample() = {
+  println(Ordering.compare(-5, 10))
+  println(Ordering.compare(List(1,2,4), List(1,2,3)))
+  println(Ordering.compare(List("a","b","c"), List("a","b","c","d")))
+  
+  val complexA = List(("a", 5, List("x", "y")), ("b", 11, List("p", "q")))
+  val complexB = List(("a", 5, List("x", "y")), ("b", 11, List("p")))
+  println(Ordering.compare(complexA, complexB))
+}
 ```
 
 Notice you don't need to manually construct `Ordering` objects! Nor specify any types!
@@ -263,21 +241,23 @@ type class.
 
 ```scala
 object Ordering {
-  def compare[T](x: T, y: T)(implicit ord: Ordering[T]): Int = ord.compare(x,y)
+  def compare[T](x: T, y: T)(implicit ord: Ordering[T]): Boolean = ord.compare(x, y)
+  def equal[T](x: T, y: T)(implicit ord: Ordering[T]): Boolean = ord.equal(x, y)
 }
 ```
 
 Now you can do:
 ```scala
 implicit val intOrdering = new IntOrdering
-Ordering.max(1,2)
+Ordering.compare(1,2)
 ```
 
 This style of implicits is so common (because of type classes) that Scala provides a shorthand
-syntax, called *Context Bounds*. We can use this syntax like so:
+syntax, called *Context Bounds*, which can be used here:
 ```scala
 object Ordering {
-  def compare[T: Ordering](x: T, y: T): Int = implicitly[Ordering[T]].compare(x,y)
+  def compare[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].compare(x, y)
+  def equal[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].equal(x, y)
 }
 ```
 
@@ -291,17 +271,14 @@ Modify the implementation for `ListOrdering` so that `subOrder` is an implicit v
 class ListOrdering[T: Ordering] extends Ordering[List[T]] {
   @tailrec
   final override def compare(x: List[T], y: List[T]) = (x, y) match {
-    case (headX :: tailX, headY :: tailY) => {
-      val comparison = Ordering.compare(headX, headY)
-      if (comparison == 0) {
+    case (headX :: tailX, headY :: tailY) =>
+      if (Ordering.equal(headX, headY)) {
         compare(tailX, tailY)
       } else {
-        comparison
+        Ordering.compare(headX, headY)
       }
-    }
-    case (head :: tail, Nil) => 1
-    case (Nil, head :: tail) => -1
-    case (Nil, Nil) => 0
+    case (Nil, _) => true
+    case (_, Nil) => false
   }
 }
 ```
@@ -314,35 +291,32 @@ a name (which would be pointless since it's implicit).
 In a similar way, modify `Tup2Ordering` and `Tup3Ordering`.
 ```scala
 class Tup2Ordering[A: Ordering, B: Ordering] extends Ordering[(A, B)] {
-  override def compare(x: (A, B), y: (A, B)) = {
-    val comparison = Ordering.compare(x._1, y._1)
-    if (comparison == 0) {
+  override def compare(x: (A, B), y: (A, B)) =
+    if (Ordering.equal(x._1, y._1)) {
       Ordering.compare(x._2, y._2)
     } else {
-      comparison
+      Ordering.compare(x._1, y._1)
     }
-  }
 }
 ```
 
 ```scala
 class Tup3Ordering[A, B, C](implicit aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
     extends Ordering[(A, B, C)] {
-  override def compare(x: (A, B, C), y: (A, B, C)) = {
-    val comparison = Ordering.compare(x._1, y._1)
-    if (comparison == 0) {
+  override def compare(x: (A, B, C), y: (A, B, C)) =
+    if (Ordering.equal(x._1, y._1)) {
       Ordering.compare((x._2, x._3), (y._2, y._3))
     } else {
-      comparison
+      Ordering.compare(x._1, y._1)
     }
-  }
 }
 ```
 
-#### Lastly, add implicit `Ordering` objects into the `Ordering` companion object
+#### Lastly, add implicit `Ordering` implementations into the `Ordering` companion object
 ```scala
 object Ordering {
-  def compare[T: Ordering](x: T, y: T): Int = implicitly[Ordering[T]].compare(x,y)
+  def compare[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].compare(x, y)
+  def equal[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].equal(x, y)
 
   implicit val intOrdering: Ordering[Int] = new IntOrdering
   implicit val strOrdering: Ordering[String] = new StrOrdering
@@ -360,30 +334,16 @@ the `Ordering` companion object.
 And we're done. You can now use the `Ordering` API as we showed earlier:
 
 ```scala
-  def aBeautifulExample() = {
-    println(Ordering.compare(-5, 10))
-    println(Ordering.compare(List(1,2,3), List(1,5,2)))
-    println(Ordering.compare(List("a","b","z"), List("a","b","c","d")))
-    
-    val complexA = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y")))
-    val complexB = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y", "z")))
-    println(Ordering.compare(complexA, complexB))
-  }
+def beautifulExample() = {
+  println(Ordering.compare(-5, 10))
+  println(Ordering.compare(List(1,2,4), List(1,2,3)))
+  println(Ordering.compare(List("a","b","c"), List("a","b","c","d")))
+  
+  val complexA = List(("a", 5, List("x", "y")), ("b", 11, List("p", "q")))
+  val complexB = List(("a", 5, List("x", "y")), ("b", 11, List("p")))
+  println(Ordering.compare(complexA, complexB))
+}
 ```
-
-### Tracing through the automagic
-
-Now when you compile:
-```scala
-Ordering.compare(List(1,2,3,4), List(1,5,2))
-```
-1. The `scalac` compiler will determine that you are trying to invoke `Ordering[List[Int]].compare`
-2. This method can only be called if there exists, in scope, an implict `Ordering[List[Int]]` object
-3. The compiler looks for such an object, and finds the `listOrdering` method
-4. But the `listOrdering` method can only be invoked if there exists an implicit `Ordering[Int]` object
-5. The compiler looks for such an object, and finds the `intOrdering` value
-
-Then at run time the JVM ultimately invokes the`listOrdering.compare` with `intOrdering` as the subOrder.
 
 Composability
 -------------
