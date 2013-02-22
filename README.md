@@ -179,7 +179,7 @@ If you have even deeper-nested structures, it gets even uglier as the next examp
 
 ### An even uglier Java-style example
 
-Let's first define `Ordering` classes for 2-tuples and 3-tuples (this part's not ugly):
+Let's first define `Ordering` classes for 2-tuples and 3-tuples (this is not the ugly part):
 
 ```scala
 class Tup2Ordering[A, B](subOrderA: Ordering[A], subOrderB: Ordering[B]) extends Ordering[(A, B)] {
@@ -208,7 +208,7 @@ class Tup3Ordering[A, B, C](aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
 }
 ```
 
-Now let's use these orderings to compare a complex data structure (this part's ugly).
+Now let's use these orderings to compare a complex data structure (this is the ugly part).
 
 ```scala
 def anEvenUglierExample() = {
@@ -283,7 +283,6 @@ object Ordering {
 
 The type parameter `[T: Ordering]` means `T` can be any type as long as there is an implicit
 `Ordering[T]` object available.
-
 
 #### Second, modify the type-class implementations to use implicits
 
@@ -386,65 +385,38 @@ Ordering.compare(List(1,2,3,4), List(1,5,2))
 
 Then at run time the JVM ultimately invokes the`listOrdering.compare` with `intOrdering` as the subOrder.
 
-Type constraints and compile-time errors
-----------------------------------------
-An interesting aspect of type classes, which we will explore further in a later section TODO, is
-that type classes provide a new way to define type constraints on method parameters.
-
-In the `Ordering` example, for instance, you can only call `Ordering.max(a, b)` if `a` and `b` have
-an associated type class. In our case, `Ordering.max` can only be called on `Int`'s, `String`'s,
-`List[T]`'s (where `T` is one of the above). Notice we have managed to define a type constraint independent of
-the type hierarchy.
-
-What happens when we try to call `Ordering.max` an an unsupported type?
-```scala
-Ordering.max(1.0, 2.0)
-```
-
-yields a compile error:
-
-```scala
-error: could not find implicit value for evidence parameter of type com.mikegagnon.typeclass.Ordering[Double]
-```
-
-TODO 
-
 Composability
 -------------
-Type classes provide a very elegant form of composability.
+Type classes provide an elegant form of composability.
 
 For example we can just as easily compare two-dimensional lists (of type `List[List[Int]]`) as we can
-one-dimensional lists.
+one-dimensional lists. The same goes for complex structures such as
+`List[(String, (Int, String), List[String])]`.
 
-If we also defined Ordering objects for 2-tuples, 3-tuples and so on we could just as easily compare
-values of complex types such as:
-`List[(String, (Int, String), List[String])]`
-
-The semantics for comparison are always intuitive. I think that's beautiful.
+If you understand how comparison works for each of the individual components of a complex data
+structure, then you will always understand the semantics of comparison for the complete data structure.
 
 Criticisms
 ----------
-As the saying goes, design patterns compensate for language weaknesses. With regards to type
-classes, there are several drawbacks to type classes that I believe stem from the fact that type
-classes are codified as a design pattern on top of implicits, rather than as a first-class language
-feature.
+There are several drawbacks to Scala-style type classes that I believe stem from the fact that they are
+codified as a design pattern on top of implicits, rather than as a first-class language feature.
 
-1. Debugability. Automagic is a code smell.
+1. Lots of boiler plate.
+    - the entire companion object is entirely boiler plate
+    - tuples...
+2. Debugability. Automagic is a code smell.
     - Implicit control flow
     - Missing implicit values.
     - Compile-time error messages are, by default, presented at the conceptual level of implicits, not
 at the conceptual level of type classes.
-2. Implicit scope issues
+3. Implicit scope issues
     - When I define a new concrete instantiation of a 3rd party type-class, it's problematic to get it
 in scope. Workaround: put implicit values in package object.
-3. Lots of boiler plate.
-    - the entire companion object is entirely boiler plate
-    - tuples...
+
 
 TODO
 ----
 Discuss
-- Expression problem
 - Using type classes to escape hierarchical type system.
 
 See also
@@ -453,7 +425,7 @@ See also
 
 Acknowledgements
 ================
-Thank you for the valuable feedback!
+Thank you for your valuable feedback!
 - [Oscar Boykin](https://github.com/johnynek)
 - [Sam Ritchie](https://github.com/sritchie)
 - [Arkajit Dey](https://github.com/arkajit)
