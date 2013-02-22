@@ -85,7 +85,7 @@ class, nor modifying the type hierarchy for `Employee` classes.
 
 Divergence from traditional OOP design
 --------------------------------------
-Type classes represent a useful divergence from traditional objected-oriented design.
+Type classes represent a divergence from traditional objected-oriented design.
 One of the central tenets of OOP design is the unification of data structures
 (fields) and functionality (methods) into classes.
 
@@ -211,7 +211,7 @@ false
 ### Good: Scala-style type classes
 
 In contrast, our client code will look beautiful once we modify the `Ordering` type class
-to take advantage of Scala's language features:
+to exploit a common design pattern in Scala.
 
 ```scala
 def beautifulExample() = {
@@ -341,6 +341,37 @@ def beautifulExample() = {
   val complexB = List(("a", 5, List("x", "y")), ("b", 11, List("p")))
   println(Ordering.compare(complexA, complexB))
 }
+```
+
+Client code should also use the context-bounds syntax to access `Ordering` functionality.
+For example:
+
+```scala
+def min[T: Ordering](items: T*) : Option[T] =
+  items.reduceOption{ (a, b) =>
+    if (Ordering.compare(a, b)) a else b
+  }
+```
+
+```scala
+def printMin[T: Ordering](a: T, b: T) = println(min(a, b))
+```
+
+```scala
+def beautifulExample() = {
+  printMin(-5, 10)
+  printMin(List(1,2,4), List(1,2,3))
+  printMin(List("a","b","c"), List("a","b","c","d"))
+  printMin(complexA, complexB)
+}
+```
+
+Which would print:
+```scala
+Some(-5)
+Some(List(1, 2, 3))
+Some(List(a, b, c))
+Some(List((a,5,List(x, y)), (b,11,List(p))))
 ```
 
 Composability
