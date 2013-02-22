@@ -10,8 +10,8 @@ in Scala.
 What is a type class?
 ---------------------
 
-In Scala, a *type class* is a trait that defines functionality associated with one or more types,
-but is unrelated to the type hierarchy of those types.
+In Scala, a *type class* is a trait that defines functionality associated with one or more types --- but
+is unrelated to the type hierarchy of those types.
 
 For example Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
 trait is a type class (which is analagous to Java's
@@ -61,10 +61,10 @@ Type classes are nice because they allow you to define functionality associated 
 without needing to affect the type hierarchy of those types. This feature has numerous practical
 benefits.
 
-Perhaps most importantly you add functionality to a type without needing to modify the class
-definition for that type.
+Perhaps most importantly you can add functionality to a type without needing to modify the class
+definition, nor the type hierarchy, for that type.
 
-Let's use `Ordering` versus `Ordered` as a concrete example. Say you are using a third party
+Let's use `Ordering` versus `Ordered` as a concrete example. Say you are using a third-party
 class `Employee` to represent employees:
 
 ```scala
@@ -80,12 +80,12 @@ class OrderedEmployee(id: Long) extends Employee(id) with Ordered[OrderedEmploye
 }
 ```
 
-But this design isn't ideal, because it goes against the intended semantics of the sub-class
-relationship; `OrderedEmployee` isn't truly a *type* of `Employee`. Rather, it's
+But this design isn't ideal, because it violates the intended semantics of the subclass
+relationship; `OrderedEmployee` isn't truly a *type* of `Employee`. Rather, it is
 an `Employee` with some extra functionality jerry-rigged on.
 
-If the third-party library already has a subclasses of `Employee`, say `Manager`
-and `TemporaryEmployee` then you can't just inject `OrderedEmployee` in between
+If the third-party library already has subclasses of `Employee`, say `Manager`
+and `Temp`, then you can't just inject `OrderedEmployee` in between
 `Employee` and its subclasses.
 
 The better solution is to implement `Ordering` for `Employee` objects:
@@ -95,20 +95,22 @@ class EmployeeOrdering[T <: Employee] extends Ordering[T] {
 }
 ```
 
-Now you can order every type of `Employee` without modifying the type hierarchy for
-`Employee` classes.
+Now you can order every type of `Employee` without modifying the original `Employee`
+class, nor modifying the type hierarchy for `Employee` classes.
 
 Divergence from traditional OOP design
 --------------------------------------
+Type classes represent a useful divergence from traditional objected-oriented design.
 One of the central tenets of OOP design is the unification of data structures
-(fields) and data functionality (methods) into classes. 
-Type classes represent a divergence from traditional objected-oriented design,
-as they provide an elegant and extensible mechanism for divorcing those concerns.
+(fields) and functionality (methods) into classes.
+
+Type classes provide an elegant and extensible mechanism for divorcing *data structures*
+from the *functionality* relating to those data structures.
 
 How to make type classes convenient
 -----------------------------------
 Why haven't type classes caught on as much? I think it's because in languages such as Java,
-type classes are inconvenient. To illustrate the inconvenience, let's implement a few
+type classes are inconvenient. To illustrate this inconvenience, let's implement a few
 instances of the `Ordering` type class using Java-style programmming.
 
 ### Bad: Java-style type classes
@@ -153,7 +155,7 @@ class ListOrdering[T](subOrder: Ordering[T]) extends Ordering[List[T]] {
 Here's how you would use these classes in the style of Java programming. 
 
 ```scala
-def javaStyle() = {
+def anUglyExample() = {
   val intOrdering = new IntOrdering
   val strOrdering = new StrOrdering
   val listIntOrdering = new ListOrdering[Int](intOrdering)
@@ -171,11 +173,13 @@ Which would print:
 1
 ```
 
-The client code is ugly and inconvenient because there's lots of boiler plate.
-You can't just compare two objects; you must first manually construct `Ordering` objects.
-If you have even deeper-nested structures, it gets even uglier. 
+The client code is ugly and inconvenient because of all the tedious boiler plate.
+You can't just compare two values; you must first manually construct `Ordering` objects.
+If you have even deeper-nested structures, it gets even uglier as the next example shows.
 
-### An even worse Java-style example
+### An even uglier Java-style example
+
+Let's first define `Ordering` classes for 2-tuples and 3-tuples (this part's not ugly):
 
 ```scala
 class Tup2Ordering[A, B](subOrderA: Ordering[A], subOrderB: Ordering[B]) extends Ordering[(A, B)] {
@@ -204,8 +208,10 @@ class Tup3Ordering[A, B, C](aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
 }
 ```
 
+Now let's use these orderings to compare a complex data structure (this part's ugly).
+
 ```scala
-def withoutTypeClasses() = {
+def anEvenUglierExample() = {
   val intOrdering = new IntOrdering
   val strOrdering = new StrOrdering
   val listStrOrdering = new ListOrdering[String]()(strOrdering)
@@ -221,27 +227,32 @@ def withoutTypeClasses() = {
 }
 ```
 
+Which would print:
+```
+-1
+```
+
 ### Good: Scala-style type classes
 
-To contrast, our client code will look like this once we modify the `Ordering` type-class
+In contrast, our client code will look beautiful once we modify the `Ordering` type class
 to take advantage of Scala's language features:
 
 ```scala
-  def withTypeClasses() = {
-    println(Ordering.max(-5, 10))
-    println(Ordering.max(List(1,2,3), List(1,5,2)))
-    println(Ordering.max(List("a","b","z"), List("a","b","c","d")))
+  def aBeautifulExample() = {
+    println(Ordering.compare(-5, 10))
+    println(Ordering.compare(List(1,2,3), List(1,5,2)))
+    println(Ordering.compare(List("a","b","z"), List("a","b","c","d")))
     
     val complexA = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y")))
     val complexB = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y", "z")))
-    println(Ordering.max(complexA, complexB))
+    println(Ordering.compare(complexA, complexB))
   }
 ```
 
-Notice you don't have to specify types! Nor manually construct `Ordering` objects! 
+Notice you don't need to manually construct `Ordering` objects! Nor specify any types!
 
-Instead, you just ask the `Ordering` object to give you the max between two values, and it
-automagically figures everything out.
+Instead, you just ask the `Ordering` object to compare two values, and it automagically
+figures everything out.
 
 How do you do you accomplish this feat? It's easy; just make all the type classes `implicit`
 and define an `Ordering` companion object.
@@ -303,7 +314,7 @@ a name (which would be pointless since it's implicit).
 
 In a similar way, modify `Tup2Ordering` and `Tup3Ordering`.
 ```scala
-class Tup2Ordering[A : Ordering, B : Ordering] extends Ordering[(A, B)] {
+class Tup2Ordering[A: Ordering, B: Ordering] extends Ordering[(A, B)] {
   override def compare(x: (A, B), y: (A, B)) = {
     val comparison = Ordering.compare(x._1, y._1)
     if (comparison == 0) {
@@ -329,7 +340,6 @@ class Tup3Ordering[A, B, C](implicit aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
 }
 ```
 
-
 #### Lastly, add implicit `Ordering` objects into the `Ordering` companion object
 ```scala
 object Ordering {
@@ -348,13 +358,17 @@ the `Ordering` companion object.
 
 #### Beautiful Scala-style client code
 
-And we're done. You can now use the Ordering API as we showed earlier:
+And we're done. You can now use the `Ordering` API as we showed earlier:
 
 ```scala
-  def withTypeClasses() = {
-    println(Ordering.max(-5, 10))
-    println(Ordering.max(List(1,2,3), List(1,5,2)))
-    println(Ordering.max(List("a","b","z"), List("a","b","c","d")))
+  def aBeautifulExample() = {
+    println(Ordering.compare(-5, 10))
+    println(Ordering.compare(List(1,2,3), List(1,5,2)))
+    println(Ordering.compare(List("a","b","z"), List("a","b","c","d")))
+    
+    val complexA = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y")))
+    val complexB = List(("a", 5, List("x", "y")), ("a", 5, List("x", "y", "z")))
+    println(Ordering.compare(complexA, complexB))
   }
 ```
 
