@@ -15,8 +15,7 @@ is unrelated to the type hierarchy of those types.
 
 For example, Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
 trait *is* a type class, while the
-[`Ordered`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordered) trait *is not* a
-type class.
+[`Ordered`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordered) trait *is not*.
 
 Here is a simplified defintion of the `Ordering` type class, taken from
 ["Type Classes as Objects and Implicits"](http://ropas.snu.ac.kr/~bruno/papers/TypeClasses.pdf):
