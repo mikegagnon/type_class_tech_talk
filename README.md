@@ -45,8 +45,8 @@ Type classes are nice because they allow you to define functionality associated 
 without needing to affect the type hierarchy of those types. This feature has numerous practical
 benefits.
 
-Perhaps most importantly you can add functionality to a type without needing to modify the class
-definition, nor the type hierarchy, for that type.
+Perhaps most importantly you can add functionality to a type without modifying its class
+definition or its type hierarchy.
 
 Let's use `Ordering` versus `Ordered` as a concrete example. Say you are using a third-party
 class `Employee` to represent employees:
