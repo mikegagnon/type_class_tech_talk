@@ -259,7 +259,7 @@ object Ordering {
 ```
 
 The type parameter `[T: Ordering]` means `T` can be any type as long as there is an implicit
-`Ordering[T]` object available.
+`Ordering[T]` object available. You can read it as `T` "has a" `Ordering`.
 
 #### Second, modify the type-class implementations to use implicits
 
