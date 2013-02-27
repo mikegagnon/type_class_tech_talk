@@ -139,7 +139,10 @@ object OrderingDemo {
       .filter{ _.size == 2 }
       .forall{ pair => Ordering.compare(pair.head, pair.tail.head) }
 
-  // http://en.wikipedia.org/wiki/Bogosort
+  /**
+   * Uses Bogosort, which has linear performance (at best)
+   * http://en.wikipedia.org/wiki/Bogosort
+   */
   @tailrec
   def sort[T, CC[X] <: Iterable[X]](items: CC[T])
   (implicit bf: CanBuildFrom[CC[T], T, CC[T]], ord: Ordering[T]): CC[T] = {
