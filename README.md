@@ -108,13 +108,6 @@ class StrOrdering extends Ordering[String] {
 ```
 
 ```scala
-/**
- * When comparing lists of different lengths, the compare method essentially pads the smaller
- * list (on its right side) with minimal values.
- * e.g. compare(List(1,2,3), List(1)) is equivalent to
- *      compare(List(1,2,3), List(1, scala.Int.MinValue, scala.Int.MinValue))
- * These semantics are consistent with String compare
- */
 class ListOrdering[T](subOrder: Ordering[T]) extends Ordering[List[T]] {
   @tailrec
   final override def compare(x: List[T], y: List[T]) = (x, y) match {
