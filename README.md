@@ -1,8 +1,5 @@
 Type Class Tech Talk
 ====================
-
-*Work in progress.* All feedback welcome (just file an issue or send a pull request).
-
 Type classes represent an effective (and popular) design pattern in Scala that is useful for developing
 beautiful APIs. They also allow you to accomplish type-system feats that wouldn't otherwise be possible
 in Scala.
@@ -386,34 +383,90 @@ structure, then you will always understand the semantics of comparison for the c
 
 Criticisms
 ----------
-There are several drawbacks to Scala-style type classes that I believe stem from the fact that they are
-codified as a design pattern on top of implicits, rather than as a first-class language feature.
+Scala-style type classes have several several pain points, which I believe stem from the fact that
+type classes are not a first-class language feature, but rather than a design pattern implemented
+on top of implicits
 
-1. Lots of boiler plate.
-    - the entire companion object is entirely boiler plate
-    - tuples...
-2. Debugability. Automagic is a code smell.
-    - Implicit control flow
-    - Missing implicit values.
-    - Compile-time error messages are, by default, presented at the conceptual level of implicits, not
-at the conceptual level of type classes.
-3. Implicit scope issues
-    - When I define a new concrete instantiation of a 3rd party type-class, it's problematic to get it
-in scope. Workaround: put implicit values in package object.
+1.  *Ugly code*. While type classes enable client code to be beautiful, the type classes themselves tend to be ugly.
+    For example, the `Ordering` companion object is essentially all boiler plate.
+2.  *Debugging*. Implicits, and therefore type classes, can be annoying to debug. For example, if you are trying
+    to automatically compose an `Ordering` object, but one of the `Orderings` is missing (say
+    `tup2Ordering` is commented out in the `Ordering` companion object) you would get
+    this unhelpful error message:
 
+    ```
+    OrderingDemo.scala:30: error: diverging implicit expansion for type Ordering[A]
+    starting with method tup3Ordering in object Ordering
+        new Tup3Ordering
+        ^
+    one error found
+    ```
 
-TODO
-----
-Discuss
-- Using type classes to escape hierarchical type system.
+    Or, if `tup3Ordering` is commented out, you would get this unhelpful error message:
+    ```
+    OrderingDemo.scala:121: error: could not find implicit value for evidence parameter of type
+    Ordering[List[(java.lang.String, Int, List[java.lang.String])]]
+       compare(complexA, complexB)
+       ^
+    one error found
+    ```
+   
+    There are a number of ways to cope with these debugging issues. For one, you can
+    [annotate your type classes with @implicitNotFound](http://suereth.blogspot.com/2011/03/annotate-your-type-classes.html),
+    which translates "could not find implicit value for evidence parameter" compiler-error messages
+    into custom error messages.
+    
+    To deal with an implicit-not-found error, it's often helpful to manually construct
+    type-class objects (à la Java-style programming). This way, you can hone in on exactly what is missing
+    or going wrong.
+    
+3.  *Scope*. When you are writing your own type classes it is simple enough to put your type-class
+    implementations in scope; just put them in the companion object for the type class (as in our
+    `Ordering` example). But what do you do if you are working with a 3rd party type class and you
+    can't modify their companion object? It can be annoying to `import` your type class implementations
+    every time you need them.  One option is to put your implicits in your
+    [package objects](http://www.scala-lang.org/docu/files/packageobjects/packageobjects.html), so your
+    type classes are always in scope for that package.
 
-See also
-- Type classes in Scala standard library 
-- Algebird, bijection
+    Another scoping problem is that Scala's rules for implicit scopes and priorities are complex.
+    I believe the only place these rules are fully documented is in
+    [The Scala Language Specification](http://www.scala-lang.org/docu/files/ScalaReference.pdf)
+    (see page 105), which can be rather unintelligible for the uninitiated.
+    
+    You can navigate the maze of scoping rules by following common design patterns.
+    As our example shows, the companion object is a nice place to define implicits. You can also
+    control the "priority" of implicits by placing "low priority" implicits in a super trait,
+    and "higher priority" implicits in sub classes. See for example
+    [`LowPriorityOrderingImplicits`](https://github.com/scala/scala/blob/807dbe557a47b6944a7d352c0316bcd78733f473/src/library/scala/math/Ordering.scala#L142)
+    in the Scala standard library.
+
+The designers of Scala are aware of these issues. In fact, it seems they made a conscious design decision
+to build type classes on top of implicits rather than making them a first-class feature. The benefit of this
+design is that type classes are more powerful. Languages such as Haskell (which
+features first-class type classes) have less powerful type classes.
+As an example of the extra power with Scala type classes, you
+can define multiple implementations for `Ordering[Int]` and control which one is used by either implicit
+scoping or by explicit parameter passing. You can read more on this topic in
+["Type Classes as Objects and Implicits"](http://ropas.snu.ac.kr/~bruno/papers/TypeClasses.pdf).
+
+Please file an issue or send me a pull request if you have other criticisms and tips for workarounds.
+
+Learn more
+----------
+* The Scala Standard Library makes heavy use of type classes. See for example
+[`CanBuildFrom`](http://blog.bruchez.name/2012/08/getting-to-know-canbuildfrom-without-phd.html),
+[`Numeric`](https://github.com/scala/scala/blob/v2.10.0/src/library/scala/math/Numeric.scala#L1),
+and [`Equiv`](https://github.com/scala/scala/blob/v2.10.0/src/library/scala/math/Equiv.scala#L1).
+* Twitter's [Flag](https://github.com/twitter/util/blob/master/util-app/src/main/scala/com/twitter/app/Flag.scala)
+ library which uses type classes to parse command-line arguments.
+* [Algebird](https://github.com/twitter/algebird), which uses type classes to define algebras over
+data structures.
+* [Bijection](https://github.com/twitter/bijection), which uses type classes to define ways
+ to convert data-structure pairs, back and forth.
 
 Acknowledgements
 ================
-Thank you for your valuable feedback!
+Please file issues and send pull requests. Thank you for your valuable feedback!
 - [Oscar Boykin](https://github.com/johnynek)
 - [Sam Ritchie](https://github.com/sritchie)
 - [Arkajit Dey](https://github.com/arkajit)
