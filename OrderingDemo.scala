@@ -22,19 +22,19 @@ object Ordering {
   def compare[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].compare(x, y)
   def equal[T: Ordering](x: T, y: T): Boolean = implicitly[Ordering[T]].equal(x, y)
 
-  implicit val intOrdering: Ordering[Int] = new IntOrdering
-  implicit val strOrdering: Ordering[String] = new StrOrdering
+  implicit val intOrdering: Ordering[Int] = IntOrdering
+  implicit val strOrdering: Ordering[String] = StrOrdering
   implicit def listOrdering[T: Ordering]: Ordering[List[T]] = new ListOrdering
   implicit def tup2Ordering[A: Ordering, B: Ordering]: Ordering[(A, B)] = new Tup2Ordering
   implicit def tup3Ordering[A: Ordering, B: Ordering, C: Ordering]: Ordering[(A, B, C)] =
     new Tup3Ordering
 }
 
-class IntOrdering extends Ordering[Int] {
+object IntOrdering extends Ordering[Int] {
   override def compare(x: Int, y: Int) = x <= y
 }
 
-class StrOrdering extends Ordering[String] {
+object StrOrdering extends Ordering[String] {
   override def compare(x: String, y: String) = x <= y
 }
 
@@ -84,21 +84,17 @@ object OrderingDemo {
   val complexB = List(("a", 5, List("x", "y")), ("b", 11, List("p")))
 
   def uglyExample() = {
-    val intOrdering = new IntOrdering
-    val strOrdering = new StrOrdering
-    val listIntOrdering = new ListOrdering[Int]()(intOrdering)
-    val listStrOrdering = new ListOrdering[String]()(strOrdering)
-    println(intOrdering.compare(-5, 10))
+    val listIntOrdering = new ListOrdering[Int]()(IntOrdering)
+    val listStrOrdering = new ListOrdering[String]()(StrOrdering)
+    println(IntOrdering.compare(-5, 10))
     println(listIntOrdering.compare(List(1,2,4), List(1,2,3)))
     println(listStrOrdering.compare(List("a","b","c"), List("a","b","c","d")))
   }
 
   def evenUglierExample() = {
-    val intOrdering = new IntOrdering
-    val strOrdering = new StrOrdering
-    val listStrOrdering = new ListOrdering[String]()(strOrdering)
-    val pairOrdering = new Tup2Ordering[Int, List[String]]()(intOrdering, listStrOrdering)
-    val tripleOrdering = new Tup3Ordering[String, Int, List[String]]()(strOrdering, pairOrdering)
+    val listStrOrdering = new ListOrdering[String]()(StrOrdering)
+    val pairOrdering = new Tup2Ordering[Int, List[String]]()(IntOrdering, listStrOrdering)
+    val tripleOrdering = new Tup3Ordering[String, Int, List[String]]()(StrOrdering, pairOrdering)
     val complexOrdering = new ListOrdering[(String, Int, List[String])]()(tripleOrdering)
     println(complexOrdering.compare(complexA, complexB))
   }
