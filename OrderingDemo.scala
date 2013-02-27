@@ -78,6 +78,18 @@ class Tup3Ordering[A, B, C](implicit aOrd: Ordering[A], bcOrd: Ordering[(B, C)])
     }
 }
 
+class Employee(val id: Long)
+case class Manager(override val id: Long) extends Employee(id)
+case class Temp(override val id: Long) extends Employee(id)
+
+object EmployeeOrdering {
+  implicit def employeeOrdering[T <: Employee] = new EmployeeOrdering[T]
+}
+
+class EmployeeOrdering[T <: Employee] extends Ordering[T] {
+    def compare(x: T, y: T) = x.id <= y.id
+}
+
 object OrderingDemo {
 
   val complexA = List(("a", 5, List("x", "y")), ("b", 11, List("p", "q")))
@@ -148,6 +160,7 @@ object OrderingDemo {
     println("\nbeautifulExample")
     beautifulExample()
 
-    println(sort(List(4, 1, 3, 2, 5)))
+    import EmployeeOrdering._
+    println(sort(List(Temp(4), Temp(1), Temp(3), Manager(2), Manager(5))))
   }
 }
