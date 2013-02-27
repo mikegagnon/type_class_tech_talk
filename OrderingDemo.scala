@@ -121,6 +121,27 @@ object OrderingDemo {
     compare(complexA, complexB)
   }
 
+  import scala.util.Random
+  import scala.collection.Iterable
+  import scala.collection.generic.CanBuildFrom
+
+  def sorted[T: Ordering, CC[X] <: Iterable[X]](items: CC[T]): Boolean =
+    items
+      .sliding(2)
+      .filter{ _.size == 2 }
+      .forall{ pair => Ordering.compare(pair.head, pair.tail.head) }
+
+  // http://en.wikipedia.org/wiki/Bogosort
+  @tailrec
+  def sort[T, CC[X] <: Iterable[X]](items: CC[T])
+  (implicit bf: CanBuildFrom[CC[T], T, CC[T]], ord: Ordering[T]): CC[T] = {
+    val shuffled = Random.shuffle(items)
+    if (sorted(shuffled))
+      shuffled
+    else
+      sort(items)
+  }
+
   def main(args: Array[String]) {
     println("uglyExample")
     uglyExample()
@@ -130,5 +151,7 @@ object OrderingDemo {
 
     println("\nbeautifulExample")
     beautifulExample()
+
+    println(sort(List(4, 1, 3, 2, 5)))
   }
 }
