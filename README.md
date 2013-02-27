@@ -29,7 +29,7 @@ Contrast that trait with this simplified definition of `Ordered`, which *is not*
 trait Ordered[T] {
   // returns this <= that
   def compare(that: T): Boolean
-  final def equal(that: T): Boolean = compare(y) && y.compare(x)
+  final def equal(that: T): Boolean = compare(that) && that.compare(this)
 }
 ```
 
