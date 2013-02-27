@@ -2,15 +2,13 @@
  * Simple demonstration of type classes
  *
  * > scalac OrderingDemo.scala
- * > scala com.mikegagnon.typeclass.OrderingDemo
+ * > scala OrderingDemo
  *
  * Examples inspired by "Type Classes as Objects and Implicits," by Oliveira, Moors, and Odersky,
  * OOPSLA/SPLASH 2010.
  *
  * @author Mike Gagnon
  */
-
-package com.mikegagnon.typeclass
 
 import scala.annotation.{implicitNotFound, tailrec}
 
