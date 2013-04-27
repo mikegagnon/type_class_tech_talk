@@ -10,6 +10,9 @@ What is a type class?
 In Scala, a *type class* is a trait that defines functionality associated with one or more types --- but
 is unrelated to the type hierarchy of those types.
 
+And now you're thinking WTF? Well it's actually pretty simple --- English is just a bad language for
+discussing type classes.
+
 For example, Scala's [`Ordering`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordering)
 trait *is* a type class, while the
 [`Ordered`](http://www.scala-lang.org/api/current/index.html#scala.math.Ordered) trait *is not*.
